@@ -1,14 +1,14 @@
-import { useState } from "react"
-import { Input } from "./components/ui/input"
+import { useState } from "react";
+import { Input } from "./components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { Button } from "./components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { ChevronDownIcon } from "lucide-react"
-import { Textarea } from "./components/ui/textarea"
+} from "@/components/ui/popover";
+import { Button } from "./components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { ChevronDownIcon } from "lucide-react";
+import { Textarea } from "./components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -17,11 +17,47 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
+import {
+  errorCutomizer,
+  todoSchema,
+  type priorityType,
+  type TodoInput,
+} from "./components/types/todo.types";
+import axios from "axios";
+import { ZodError } from "zod";
+import { toast } from "sonner";
+import { Toaster } from "./components/ui/sonner";
 
 function App() {
-  const [open, setOpen] = useState(false)
-  const [date, setDate] = useState<Date | undefined>(undefined)
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState<TodoInput>({
+    title: "",
+    description: "",
+    due_date: new Date().toISOString().split("T")[0],
+    status: "pending",
+    priority: "medium",
+  });
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await axios.post(
+        "http://localhost:3000/api/todo/create",
+        todoSchema.parse(formData)
+      );
+    } catch (err) {
+      const errorResult = await errorCutomizer(err as ZodError);
+      // setError(`${errorResult.errorPath}: ${errorResult.errorMessage}`);
+      toast.error(
+        errorResult.errorPath.charAt(0).toUpperCase() +
+          errorResult.errorPath.slice(1),
+        {
+          description: errorResult.errorMessage,
+        }
+      );
+    }
+  };
 
   return (
     <div className="flex items-center justify-center">
@@ -30,7 +66,14 @@ function App() {
           <h1 className="font-bold text-3xl">Task Manager</h1>
           <div className="w-full flex flex-col gap-5">
             <div className="flex gap-3">
-              <Input placeholder="Task title..." />
+              <Input
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                placeholder="Task title..."
+              />
+
               <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -38,42 +81,82 @@ function App() {
                     id="date"
                     className="w-48 justify-between font-normal"
                   >
-                    {date ? date.toLocaleDateString() : "Select date"}
+                    {formData.due_date ? formData.due_date : "Select date"}
                     <ChevronDownIcon />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                <PopoverContent
+                  className="w-auto overflow-hidden p-0"
+                  align="start"
+                >
                   <Calendar
                     mode="single"
-                    selected={date}
+                    selected={
+                      formData.due_date
+                        ? new Date(formData.due_date)
+                        : undefined
+                    }
                     captionLayout="dropdown"
                     onSelect={(date) => {
-                      setDate(date)
-                      setOpen(false)
+                      if (date) {
+                        setFormData({
+                          ...formData,
+                          due_date: date.toISOString().split("T")[0],
+                        });
+                      }
+                      setOpen(false);
                     }}
                   />
                 </PopoverContent>
               </Popover>
             </div>
-            <Textarea placeholder="Type your message here." />
+
+            <Textarea
+              value={formData.description}
+              onChange={(e) => {
+                setFormData({ ...formData, description: e.target.value });
+              }}
+              placeholder="Type your message here."
+            />
             <div className="flex">
-              <Select>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select a priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Fruits</SelectLabel>
-                    <SelectItem value="low">Low Priority</SelectItem>
-                    <SelectItem value="medium">Medium Priority</SelectItem>
-                    <SelectItem value="high">High Priority</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" className="ml-4 hover:cursor-pointer">Add Task</Button>
+              <div>
+                <Select
+                  value={formData.priority}
+                  onValueChange={(priority: priorityType) => {
+                    setFormData({ ...formData, priority: priority });
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select a priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Fruits</SelectLabel>
+                      <SelectItem value="low">Low Priority</SelectItem>
+                      <SelectItem value="medium">Medium Priority</SelectItem>
+                      <SelectItem value="high">High Priority</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="outline"
+                onClick={onSubmit}
+                className="ml-4 hover:cursor-pointer"
+              >
+                Add Task
+              </Button>
             </div>
             <div>
-              {(["All", "Pending", "in progress", "Completed", "Cancelled"] as const).map((priority) => (
+              {(
+                [
+                  "All",
+                  "Pending",
+                  "in progress",
+                  "Completed",
+                  "Cancelled",
+                ] as const
+              ).map((priority) => (
                 <Button
                   key={priority}
                   variant="ghost"
@@ -89,20 +172,24 @@ function App() {
                 <div className="flex justify-between">
                   <h3 className="font-bold">Task title</h3>
                   <div>
-                    <Button variant="ghost" className="text-blue-600">edit</Button>
-                    <Button variant="ghost" className="text-red-600">delete</Button>
+                    <Button variant="ghost" className="text-blue-600">
+                      edit
+                    </Button>
+                    <Button variant="ghost" className="text-red-600">
+                      delete
+                    </Button>
                   </div>
                 </div>
-                <p>
-                  sdmfnlsdk.fls;d
-                </p>
+                <p>sdmfnlsdk.fls;d</p>
                 <div className="flex justify-between items-center">
                   <div className="flex gap-2">
                     <span>Due date:</span>
                     <span>created: </span>
                   </div>
                   <div className="flex gap-3">
-                    <span className="py-1 rounded-sm bg-white px-3">status</span>
+                    <span className="py-1 rounded-sm bg-white px-3">
+                      status
+                    </span>
                     <Select>
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select a fruit" />
@@ -125,8 +212,9 @@ function App() {
           </div>
         </div>
       </div>
+      <Toaster position="top-right" richColors closeButton />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

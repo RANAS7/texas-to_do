@@ -64,6 +64,71 @@ class TodoController {
       res.status(500).json(response);
     }
   };
+
+  getAllTodos = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const todos = await todoService.getAllTodo();
+
+      const response: ApiResponse = {
+        success: true,
+        message: "Todos retrive successfully",
+        data: todos,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      const response: ApiResponse = {
+        success: false,
+        message: "Error fetching todos",
+        error: error,
+      };
+
+      res.status(500).json(response);
+    }
+  };
+
+  getTodoById = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id!);
+
+      const todo = await todoService.getTodoById(id);
+      const response: ApiResponse = {
+        success: true,
+        message: "Todo retrive successfully",
+        data: todo,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      const response: ApiResponse = {
+        success: false,
+        message: "Error retrive todo",
+        data: error,
+      };
+      res.status(500).json(response);
+    }
+  };
+
+  deleteTodoById = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = parseInt(req.params.id!);
+      const isDeleted = await todoService.deleteTodoById(id);
+      const response: ApiResponse = {
+        success: true,
+        message: "Todo Deleted successfully",
+        data: isDeleted,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      const response: ApiResponse = {
+        success: false,
+        message: "Error deleting todo",
+        data: error,
+      };
+      res.status(500).json(response);
+    }
+  };
 }
 
 export const todoController = new TodoController();
