@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "./components/ui/input";
 import {
   Popover,
@@ -19,18 +19,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  errorCutomizer,
-  todoSchema,
   type priorityType,
+  type Todo,
   type TodoInput,
 } from "./components/types/todo.types";
-import axios from "axios";
-import { ZodError } from "zod";
-import { toast } from "sonner";
 import { Toaster } from "./components/ui/sonner";
+import axios from "axios";
+import { toast } from "sonner";
 
 function App() {
   const [open, setOpen] = useState(false);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [formData, setFormData] = useState<TodoInput>({
     title: "",
     description: "",
@@ -39,25 +38,48 @@ function App() {
     priority: "medium",
   });
 
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
+  const fetchTodos = async () => {
+    await axios
+      .get("http://localhost:3000/api/todo/get-all")
+      .then((res) => {
+        setTodos(res.data.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(
+      const response = await axios.post(
         "http://localhost:3000/api/todo/create",
-        todoSchema.parse(formData)
+        formData
       );
+
+      toast.success(response.data.message);
+
+      console.log(formData);
     } catch (err) {
-      const errorResult = await errorCutomizer(err as ZodError);
-      // setError(`${errorResult.errorPath}: ${errorResult.errorMessage}`);
-      toast.error(
-        errorResult.errorPath.charAt(0).toUpperCase() +
-          errorResult.errorPath.slice(1),
-        {
-          description: errorResult.errorMessage,
-        }
-      );
+      console.log(err);
+      //   const errorResult = await errorCutomizer(err as ZodError);
+      //   // setError(`${errorResult.errorPath}: ${errorResult.errorMessage}`);
+      //   toast.error(
+      //     errorResult.errorPath.charAt(0).toUpperCase() +
+      //       errorResult.errorPath.slice(1),
+      //     {
+      //       description: errorResult.errorMessage,
+      //     }
+      //   );
+      // }
     }
   };
+
+  console.log(todos);
 
   return (
     <div className="flex items-center justify-center">
@@ -166,11 +188,14 @@ function App() {
                 </Button>
               ))}
             </div>
-            <div>
-              {/* Task list will go here */}
-              <div className="flex flex-col gap-3 border border-l-4 border-l-red-600 border-white p-4 rounded-md ">
+            {/* Task list will go here */}
+            {todos.map((todo) => (
+              <div
+                key={todo.id}
+                className="flex flex-col gap-3 border border-l-4 border-l-red-600 border-white p-4 rounded-md "
+              >
                 <div className="flex justify-between">
-                  <h3 className="font-bold">Task title</h3>
+                  <h3 className="font-bold">{todo.title}</h3>
                   <div>
                     <Button variant="ghost" className="text-blue-600">
                       edit
@@ -180,15 +205,15 @@ function App() {
                     </Button>
                   </div>
                 </div>
-                <p>sdmfnlsdk.fls;d</p>
+                <p>{todo.description}</p>
                 <div className="flex justify-between items-center">
                   <div className="flex gap-2">
-                    <span>Due date:</span>
-                    <span>created: </span>
+                    <span>Due date: {todo.due_date}</span>
+                    <span>created: {todo.created_at?.toString()}</span>
                   </div>
                   <div className="flex gap-3">
                     <span className="py-1 rounded-sm bg-white px-3">
-                      status
+                      {todo.status}
                     </span>
                     <Select>
                       <SelectTrigger className="w-[180px]">
@@ -208,7 +233,7 @@ function App() {
                   </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
