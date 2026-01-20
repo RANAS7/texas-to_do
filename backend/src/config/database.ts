@@ -7,9 +7,9 @@ class Database {
     try {
       this.connection = await mysql.createConnection({
         host: "localhost",
-        port: 3307,
+        port: 3306,
         user: "root",
-        password: "",
+        password: "root",
         database: "to_do",
       });
 
